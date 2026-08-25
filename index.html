@@ -1,0 +1,1239 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>버스타고 | 전국 시외/고속버스 예매 공식 리뉴얼</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" />
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: { pretendard: ['Pretendard', 'sans-serif'] },
+        colors: {
+          primary: { DEFAULT: '#1A56DB', dark: '#1543AD', light: '#EFF4FF' },
+          accent: { DEFAULT: '#FF6B00', dark: '#e05e00', light: '#FFF1E6' },
+          bgbase: '#F8FAFC'
+        }
+      }
+    }
+  }
+</script>
+<style>
+  * { font-family: 'Pretendard', sans-serif; }
+  body { background-color: #F8FAFC; }
+  .seat-btn { transition: all .15s ease; }
+  .seat-btn:active { transform: scale(0.92); }
+  .modal-backdrop { background: rgba(15, 23, 42, 0.6); }
+  .fade-in { animation: fadeIn .2s ease forwards; }
+  @keyframes fadeIn { from{opacity:0; transform: translateY(6px)} to{opacity:1; transform: translateY(0)} }
+  .nav-active { color: #1A56DB !important; font-weight: 700 !important; border-bottom: 2px solid #1A56DB !important; }
+</style>
+</head>
+<body class="text-slate-800 antialiased min-h-screen flex flex-col justify-between">
+
+<!-- ================= 1. 최상단 UTILITY TOP BAR ================= -->
+<div class="bg-slate-100 border-b border-slate-200/80 text-xs text-slate-500 py-1.5 px-6">
+  <div class="max-w-7xl mx-auto flex items-center justify-between">
+    <div class="flex items-center gap-2">
+      <span class="inline-block w-2 h-2 rounded-full bg-emerald-500"></span>
+      <span class="text-[11px] font-medium text-slate-600">전국버스운송사업조합연합회 공식 시외/고속버스 예매 플랫폼</span>
+    </div>
+    <div class="flex items-center gap-4 text-slate-600">
+      <button onclick="openLoginModal('login')" class="hover:text-primary transition-colors">로그인</button>
+      <span class="text-slate-300">|</span>
+      <button onclick="openLoginModal('signup')" class="hover:text-primary transition-colors">회원가입</button>
+      <span class="text-slate-300">|</span>
+      <button onclick="switchView('lookup')" class="hover:text-primary transition-colors">마이페이지</button>
+      <span class="text-slate-300">|</span>
+      <button onclick="switchView('guide')" class="hover:text-primary transition-colors">사이트맵</button>
+      <span class="text-slate-300">|</span>
+      <select class="bg-transparent text-xs font-semibold text-slate-700 outline-none cursor-pointer">
+        <option>Korean (한국어)</option>
+        <option>English</option>
+        <option>日本語</option>
+        <option>中文</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<!-- ================= 2. GNB (헤더 + 메가 드롭다운) ================= -->
+<header class="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-200 shadow-sm relative group/header">
+  <div class="max-w-7xl mx-auto px-6 h-18 py-3 flex items-center justify-between">
+    <!-- 로고 영역 -->
+    <a href="javascript:void(0)" onclick="switchView('booking')" class="flex items-center gap-3 shrink-0">
+      <div class="w-9 h-9 rounded-xl bg-primary flex items-center justify-center text-white font-black text-xl shadow-sm shadow-primary/30">B</div>
+      <div class="flex flex-col">
+        <span class="text-2xl font-black text-primary tracking-tight leading-none">BUSTAGO</span>
+        <span class="text-[9px] font-bold text-slate-400 tracking-tighter mt-0.5">전국버스운송사업조합연합회</span>
+      </div>
+    </a>
+
+    <!-- 6대 메인 메뉴 -->
+    <nav class="hidden lg:flex items-center gap-8 text-sm font-bold text-slate-700 h-full">
+      <button id="nav-booking" onclick="switchView('booking')" class="py-4 hover:text-primary transition-colors nav-active">승차권 예매</button>
+      <button id="nav-lookup" onclick="switchView('lookup')" class="py-4 hover:text-primary transition-colors">조회/변경/취소</button>
+      <button id="nav-timetable" onclick="switchView('timetable')" class="py-4 hover:text-primary transition-colors">운행정보</button>
+      <button id="nav-terminal" onclick="switchView('terminal')" class="py-4 hover:text-primary transition-colors">터미널정보</button>
+      <button id="nav-support" onclick="switchView('support')" class="py-4 hover:text-primary transition-colors">고객지원</button>
+      <button id="nav-guide" onclick="switchView('guide')" class="py-4 hover:text-primary transition-colors">이용안내</button>
+    </nav>
+
+    <!-- 우측 CTA 및 로그인 상태 -->
+    <div class="flex items-center gap-3">
+      <div id="guestHeader" class="flex items-center gap-2">
+        <button onclick="openLoginModal('login')" class="hidden sm:block px-4 py-2 text-xs font-bold text-slate-600 hover:text-primary transition-colors">로그인</button>
+        <button onclick="openLoginModal('signup')" class="px-4 py-2 rounded-xl bg-primary text-white hover:bg-primary-dark font-bold text-xs transition-colors shadow-sm">간편 예매시작</button>
+      </div>
+      <div id="userHeader" class="hidden items-center gap-3">
+        <div class="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-full border border-slate-200">
+          <div id="userAvatar" class="w-6 h-6 rounded-full bg-primary text-white text-xs font-bold flex items-center justify-center">홍</div>
+          <span id="userName" class="text-xs font-bold text-slate-800">홍길동 님</span>
+        </div>
+        <button onclick="handleLogout()" class="px-3 py-1.5 text-xs text-slate-500 hover:text-red-600 transition-colors border border-slate-200 rounded-lg">로그아웃</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 메가 드롭다운 서브메뉴 패널 (호버 시 표시) -->
+  <div class="hidden lg:group-hover/header:block absolute top-full left-0 w-full bg-white border-b border-slate-200 shadow-xl py-6 px-6 fade-in">
+    <div class="max-w-7xl mx-auto grid grid-cols-6 gap-6 text-xs text-slate-600">
+      <div class="space-y-2 border-r border-slate-100 pr-4">
+        <p class="font-extrabold text-primary text-sm mb-3">승차권 예매</p>
+        <p class="hover:text-primary cursor-pointer" onclick="switchView('booking')">• 편도 / 왕복 예매</p>
+        <p class="hover:text-primary cursor-pointer" onclick="switchView('booking')">• 실시간 잔여석 조회</p>
+        <p class="hover:text-primary cursor-pointer" onclick="switchView('booking')">• 단체 승차권 문의</p>
+      </div>
+      <div class="space-y-2 border-r border-slate-100 pr-4">
+        <p class="font-extrabold text-slate-900 text-sm mb-3">조회/변경/취소</p>
+        <p class="hover:text-primary cursor-pointer" onclick="switchView('lookup'); setLookupTab('member');">• 회원 예매내역</p>
+        <p class="hover:text-primary cursor-pointer" onclick="switchView('lookup'); setLookupTab('nonMember');">• 비회원 예매조회</p>
+        <p class="hover:text-primary cursor-pointer" onclick="switchView('lookup')">• 취소 및 환불내역</p>
+      </div>
+      <div class="space-y-2 border-r border-slate-100 pr-4">
+        <p class="font-extrabold text-slate-900 text-sm mb-3">운행정보</p>
+        <p class="hover:text-primary cursor-pointer" onclick="switchView('timetable')">• 노선별 운행시간표</p>
+        <p class="hover:text-primary cursor-pointer" onclick="switchView('timetable')">• 버스회사 안내</p>
+        <p class="hover:text-primary cursor-pointer" onclick="switchView('timetable')">• 등급별 운임요율</p>
+      </div>
+      <div class="space-y-2 border-r border-slate-100 pr-4">
+        <p class="font-extrabold text-slate-900 text-sm mb-3">터미널정보</p>
+        <p class="hover:text-primary cursor-pointer" onclick="switchView('terminal')">• 전국 터미널 안내</p>
+        <p class="hover:text-primary cursor-pointer" onclick="switchView('terminal')">• 터미널별 편의시설</p>
+        <p class="hover:text-primary cursor-pointer" onclick="switchView('terminal')">• 승강장 위치 안내</p>
+      </div>
+      <div class="space-y-2 border-r border-slate-100 pr-4">
+        <p class="font-extrabold text-slate-900 text-sm mb-3">고객지원</p>
+        <p class="hover:text-primary cursor-pointer" onclick="switchView('support')">• 공지사항</p>
+        <p class="hover:text-primary cursor-pointer" onclick="switchView('support')">• 진행중인 이벤트</p>
+        <p class="hover:text-primary cursor-pointer" onclick="switchView('support')">• 자주 묻는 질문(FAQ)</p>
+      </div>
+      <div class="space-y-2">
+        <p class="font-extrabold text-slate-900 text-sm mb-3">이용안내</p>
+        <p class="hover:text-primary cursor-pointer" onclick="switchView('guide')">• 서비스 안내</p>
+        <p class="hover:text-primary cursor-pointer" onclick="switchView('guide')">• 승차권 예매 가이드</p>
+        <p class="hover:text-primary cursor-pointer" onclick="switchView('guide')">• 취소 수수료 규정</p>
+        <p class="hover:text-primary cursor-pointer" onclick="switchView('guide')">• 모바일 승차권(QR) 이용</p>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ================= MAIN CONTENT VIEWS ================= -->
+<main class="flex-1">
+
+  <!-- ================= VIEW 1: 메인 승차권 예매 ================= -->
+  <div id="view-booking" class="fade-in">
+    <!-- Hero 섹션 & 예매 위젯 -->
+    <section class="relative bg-cover bg-center bg-no-repeat bg-slate-900 pt-12 pb-36 px-6 overflow-hidden" style="background-image: url('img/hero-bg.jpg');">
+      <div class="absolute inset-0 bg-gradient-to-b from-primary/85 via-slate-900/80 to-bgbase"></div>
+      
+      <div class="max-w-4xl mx-auto relative z-10 text-center text-white space-y-2">
+        <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight">버스타고와 함께 떠나는 편리한 버스 여행</h1>
+        <p class="text-sm md:text-base text-blue-100 font-normal">가장 빠르고 스마트한 전국 시외/고속버스 간편 예매</p>
+      </div>
+
+      <!-- Booking Card -->
+      <div class="max-w-4xl mx-auto relative z-10 mt-8">
+        <div class="bg-white rounded-2xl shadow-xl shadow-slate-900/20 border border-slate-100 p-6 md:p-8">
+          <div class="flex items-center gap-1 mb-6 bg-slate-100 rounded-lg p-1 w-fit">
+            <button id="tabOneway" onclick="setTripType('oneway')" class="px-5 py-2 rounded-md text-sm font-semibold bg-white text-primary shadow-sm transition-all">편도</button>
+            <button id="tabRound" onclick="setTripType('round')" class="px-5 py-2 rounded-md text-sm font-semibold text-slate-500 hover:text-slate-900 transition-all">왕복</button>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-3 items-center mb-4">
+            <div class="border border-slate-200 rounded-xl px-4 py-3 hover:border-primary transition-colors focus-within:border-primary">
+              <p class="text-xs text-slate-400 mb-1 font-medium">출발지</p>
+              <input id="originInput" value="동서울" class="w-full text-lg font-bold text-slate-800 outline-none bg-transparent">
+            </div>
+            <button onclick="switchStations()" class="mx-auto w-10 h-10 rounded-full bg-primary-light hover:bg-primary hover:text-white text-primary flex items-center justify-center transition-all shrink-0 shadow-sm" title="출발지/도착지 맞바꾸기">
+              <i data-lucide="arrow-left-right" class="w-4 h-4"></i>
+            </button>
+            <div class="border border-slate-200 rounded-xl px-4 py-3 hover:border-primary transition-colors focus-within:border-primary">
+              <p class="text-xs text-slate-400 mb-1 font-medium">도착지</p>
+              <input id="destInput" value="속초" class="w-full text-lg font-bold text-slate-800 outline-none bg-transparent">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
+            <div class="border border-slate-200 rounded-xl px-4 py-3 hover:border-primary transition-colors flex items-center gap-3">
+              <i data-lucide="calendar" class="w-5 h-5 text-primary shrink-0"></i>
+              <div class="flex-1">
+                <p class="text-xs text-slate-400 mb-0.5 font-medium">가는 날</p>
+                <input id="bookingDateInput" type="date" class="w-full text-sm font-semibold text-slate-800 outline-none bg-transparent cursor-pointer">
+              </div>
+            </div>
+            <div class="border border-slate-200 rounded-xl px-4 py-3 hover:border-primary transition-colors flex items-center gap-3">
+              <i data-lucide="users" class="w-5 h-5 text-primary shrink-0"></i>
+              <div class="flex-1">
+                <p class="text-xs text-slate-400 mb-0.5 font-medium">승객 수</p>
+                <select id="passengerSelect" class="w-full text-sm font-semibold text-slate-800 outline-none bg-transparent cursor-pointer">
+                  <option value="1">성인 1명</option>
+                  <option value="2">성인 2명</option>
+                  <option value="3">성인 3명</option>
+                  <option value="4">성인 4명</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <button onclick="searchBuses()" class="w-full bg-accent hover:bg-accent-dark text-white font-bold text-lg py-4 rounded-xl shadow-lg shadow-accent/25 flex items-center justify-center gap-2 transition-all">
+            <i data-lucide="search" class="w-5 h-5"></i>
+            배차 조회하기
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 배차 목록 섹션 -->
+    <section class="max-w-4xl mx-auto px-6 -mt-20 relative z-20 pb-16">
+      <div class="bg-white rounded-2xl shadow-lg shadow-slate-200/50 border border-slate-100 p-6 md:p-8">
+        <div class="flex items-center justify-between mb-5">
+          <h2 class="text-lg font-bold text-slate-900"><span id="searchResultTitle">동서울 → 속초</span> <span class="text-primary">배차 목록</span></h2>
+          <span class="text-xs text-slate-400">총 3건</span>
+        </div>
+
+        <div class="space-y-3">
+          <div class="border border-slate-200 rounded-xl p-5 hover:shadow-md hover:border-primary/40 transition-all flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div class="flex items-center gap-6">
+              <div class="text-center"><p class="text-xl font-extrabold text-slate-900">07:00</p><p class="text-xs text-slate-400">동서울</p></div>
+              <div class="flex flex-col items-center px-1">
+                <span class="text-[11px] text-slate-400">2시간 10분</span>
+                <div class="w-16 h-px bg-slate-300 relative my-1">
+                  <i data-lucide="bus-front" class="w-3.5 h-3.5 text-primary absolute -top-1.5 left-1/2 -translate-x-1/2 bg-white"></i>
+                </div>
+                <span class="text-[11px] text-slate-400 font-semibold">직행</span>
+              </div>
+              <div class="text-center"><p class="text-xl font-extrabold text-slate-900">09:10</p><p class="text-xs text-slate-400">속초</p></div>
+            </div>
+            <div class="flex items-center gap-2"><span class="text-xs font-semibold text-slate-600">금강고속</span><span class="text-xs px-2 py-0.5 rounded-full bg-primary-light text-primary font-bold">우등</span></div>
+            <div class="text-left md:text-right"><p class="text-lg font-extrabold text-slate-900">21,700원</p><p class="text-xs text-accent font-semibold">14석 남음</p></div>
+            <button onclick="openSeatModal('동서울 → 속초 · 07:00', 21700)" class="w-full md:w-auto bg-primary hover:bg-primary-dark text-white px-5 py-2.5 rounded-lg font-bold text-sm transition-colors">좌석선택</button>
+          </div>
+
+          <div class="border border-slate-200 rounded-xl p-5 hover:shadow-md hover:border-primary/40 transition-all flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div class="flex items-center gap-6">
+              <div class="text-center"><p class="text-xl font-extrabold text-slate-900">08:30</p><p class="text-xs text-slate-400">동서울</p></div>
+              <div class="flex flex-col items-center px-1">
+                <span class="text-[11px] text-slate-400">2시간 05분</span>
+                <div class="w-16 h-px bg-slate-300 relative my-1">
+                  <i data-lucide="bus-front" class="w-3.5 h-3.5 text-accent absolute -top-1.5 left-1/2 -translate-x-1/2 bg-white"></i>
+                </div>
+                <span class="text-[11px] text-slate-400 font-semibold">직행</span>
+              </div>
+              <div class="text-center"><p class="text-xl font-extrabold text-slate-900">10:35</p><p class="text-xs text-slate-400">속초</p></div>
+            </div>
+            <div class="flex items-center gap-2"><span class="text-xs font-semibold text-slate-600">동양고속</span><span class="text-xs px-2 py-0.5 rounded-full bg-accent-light text-accent font-bold">프리미엄</span></div>
+            <div class="text-left md:text-right"><p class="text-lg font-extrabold text-slate-900">28,900원</p><p class="text-xs text-accent font-semibold">4석 남음</p></div>
+            <button onclick="openSeatModal('동서울 → 속초 · 08:30', 28900)" class="w-full md:w-auto bg-primary hover:bg-primary-dark text-white px-5 py-2.5 rounded-lg font-bold text-sm transition-colors">좌석선택</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 추천 인기 여행지 섹션 -->
+    <section class="max-w-7xl mx-auto px-6 pb-20 space-y-6">
+      <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+        <div>
+          <h3 class="font-extrabold text-xl text-slate-900">버스타고 떠나는 추천 여행지</h3>
+          <p class="text-xs text-slate-400 mt-0.5">이번 주말, 가볍게 버스타고 떠나보는 건 어때요?</p>
+        </div>
+        <span class="text-xs font-bold text-primary hover:underline cursor-pointer">전체보기 +</span>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div onclick="quickSelectRoute('동서울', '속초')" class="group bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition-all cursor-pointer">
+          <div class="w-full h-48 bg-slate-100 overflow-hidden relative">
+            <img src="img/dest-sokcho.jpg" alt="속초 동해바다" onerror="this.src='https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&auto=format&fit=crop&q=80'" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+          </div>
+          <div class="p-5 space-y-2">
+            <div class="flex items-center justify-between">
+              <h4 class="font-extrabold text-lg text-slate-900">속초</h4>
+              <span class="text-xs text-slate-400 font-semibold">2시간 10분 소요</span>
+            </div>
+            <div class="flex flex-wrap gap-1.5">
+              <span class="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-blue-50 text-primary">#동해바다</span>
+              <span class="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600">#힐링</span>
+            </div>
+          </div>
+        </div>
+        <div onclick="quickSelectRoute('동서울', '강릉')" class="group bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition-all cursor-pointer">
+          <div class="w-full h-48 bg-slate-100 overflow-hidden relative">
+            <img src="img/dest-gangneung.jpg" alt="강릉 안목해변 카페거리" onerror="this.src='https://images.unsplash.com/photo-1501785888041-af3ef285b470?w=600&auto=format&fit=crop&q=80'" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+          </div>
+          <div class="p-5 space-y-2">
+            <div class="flex items-center justify-between">
+              <h4 class="font-extrabold text-lg text-slate-900">강릉</h4>
+              <span class="text-xs text-slate-400 font-semibold">1시간 40분 소요</span>
+            </div>
+            <div class="flex flex-wrap gap-1.5">
+              <span class="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-blue-50 text-primary">#카페거리</span>
+              <span class="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600">#KTX연계</span>
+            </div>
+          </div>
+        </div>
+        <div onclick="quickSelectRoute('서울경부', '부산')" class="group bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition-all cursor-pointer">
+          <div class="w-full h-48 bg-slate-100 overflow-hidden relative">
+            <img src="img/dest-busan.jpg" alt="부산 광안대교 야경" onerror="this.src='https://images.unsplash.com/photo-1518684079-3c830dcef090?w=600&auto=format&fit=crop&q=80'" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+          </div>
+          <div class="p-5 space-y-2">
+            <div class="flex items-center justify-between">
+              <h4 class="font-extrabold text-lg text-slate-900">부산</h4>
+              <span class="text-xs text-slate-400 font-semibold">4시간 15분 소요</span>
+            </div>
+            <div class="flex flex-wrap gap-1.5">
+              <span class="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-blue-50 text-primary">#야경</span>
+              <span class="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600">#미식여행</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ================= VIEW 2: 예매 조회/취소 ================= -->
+  <div id="view-lookup" class="hidden fade-in py-10 max-w-5xl mx-auto px-6">
+    <div class="mb-8">
+      <h1 class="text-2xl md:text-3xl font-extrabold text-slate-900">예매 조회 / 취소</h1>
+      <p class="text-sm text-slate-500 mt-1">예매하신 시외/고속버스 승차권을 확인하고 관리할 수 있습니다.</p>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-8">
+      <div class="flex border-b border-slate-200 bg-slate-50">
+        <button id="tabLookupMember" onclick="setLookupTab('member')" class="flex-1 py-4 font-bold text-sm text-primary bg-white border-b-2 border-primary transition-all">
+          회원 예매 내역
+        </button>
+        <button id="tabLookupNonMember" onclick="setLookupTab('nonMember')" class="flex-1 py-4 font-bold text-sm text-slate-500 hover:text-slate-700 transition-all">
+          비회원 예매 조회
+        </button>
+      </div>
+
+      <div id="lookupMemberView" class="p-6 md:p-8">
+        <div id="memberLogState"></div>
+      </div>
+
+      <div id="lookupNonMemberView" class="hidden p-6 md:p-8">
+        <form onsubmit="handleNonMemberLookup(event)" class="max-w-md mx-auto space-y-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">휴대폰 번호</label>
+            <input type="tel" id="lookupPhone" placeholder="010-0000-0000" required class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-primary outline-none text-sm">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">결제 카드번호 뒤 4자리 또는 비밀번호</label>
+            <input type="password" id="lookupPass" placeholder="숫자 4자리" required class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-primary outline-none text-sm">
+          </div>
+          <button type="submit" class="w-full py-3.5 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold text-sm transition-colors shadow-sm">
+            예매 내역 조회
+          </button>
+        </form>
+        <div id="nonMemberResult" class="mt-6"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= VIEW 3: 전국 시간표 안내 (운행정보) ================= -->
+  <div id="view-timetable" class="hidden fade-in py-10 max-w-6xl mx-auto px-6">
+    <div class="mb-8">
+      <h1 class="text-2xl md:text-3xl font-extrabold text-slate-900">전국 버스 운행정보</h1>
+      <p class="text-sm text-slate-500 mt-1">원하시는 터미널과 노선의 실시간 운행 시간표 및 요금을 검색해 보세요.</p>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-8">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-500 mb-1.5">출발 터미널</label>
+          <select id="ttOrigin" onchange="renderTimetable()" class="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-semibold text-slate-800 focus:border-primary outline-none cursor-pointer">
+            <option value="동서울">동서울종합터미널</option>
+            <option value="서울경부">서울고속버스터미널(경부)</option>
+            <option value="센트럴시티">센트럴시티터미널(호남)</option>
+            <option value="인천">인천종합터미널</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-500 mb-1.5">도착 터미널</label>
+          <select id="ttDest" onchange="renderTimetable()" class="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-semibold text-slate-800 focus:border-primary outline-none cursor-pointer">
+            <option value="전체">전체 도착지</option>
+            <option value="속초">속초시외버스터미널</option>
+            <option value="강릉">강릉시외버스터미널</option>
+            <option value="부산">부산종합버스터미널</option>
+            <option value="대전">대전복합터미널</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-500 mb-1.5">버스 등급</label>
+          <select id="ttGrade" onchange="renderTimetable()" class="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-semibold text-slate-800 focus:border-primary outline-none cursor-pointer">
+            <option value="전체">전체 등급</option>
+            <option value="우등">우등</option>
+            <option value="프리미엄">프리미엄</option>
+            <option value="일반">일반</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+      <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+        <h3 class="text-sm font-bold text-slate-800">운행 시간표 목록</h3>
+        <span id="ttCount" class="text-xs font-semibold text-primary">검색 결과</span>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm border-collapse min-w-[650px]">
+          <thead>
+            <tr class="bg-slate-100/70 text-slate-500 text-xs font-bold border-b border-slate-200">
+              <th class="py-3.5 px-6">출발시간</th>
+              <th class="py-3.5 px-6">노선 (출발 → 도착)</th>
+              <th class="py-3.5 px-6">운행회사</th>
+              <th class="py-3.5 px-6">등급</th>
+              <th class="py-3.5 px-6">소요시간</th>
+              <th class="py-3.5 px-6">성인 요금</th>
+              <th class="py-3.5 px-6 text-center">예매</th>
+            </tr>
+          </thead>
+          <tbody id="timetableTbody" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= VIEW 4: 전국 터미널 안내 ================= -->
+  <div id="view-terminal" class="hidden fade-in py-10 max-w-6xl mx-auto px-6">
+    <div class="mb-8">
+      <h1 class="text-2xl md:text-3xl font-extrabold text-slate-900">전국 터미널 안내</h1>
+      <p class="text-sm text-slate-500 mt-1">전국 주요 버스 터미널의 위치, 연락처, 편의시설 정보입니다.</p>
+    </div>
+
+    <div class="flex flex-col md:flex-row items-center justify-between gap-4 mb-8">
+      <div class="flex flex-wrap gap-2">
+        <button onclick="filterTerminalRegion('전국', this)" class="term-reg-btn px-4 py-2 rounded-xl text-xs font-bold bg-primary text-white shadow-sm transition-all">전국</button>
+        <button onclick="filterTerminalRegion('서울/경기', this)" class="term-reg-btn px-4 py-2 rounded-xl text-xs font-bold bg-white border border-slate-200 text-slate-600 hover:border-primary transition-all">서울/경기</button>
+        <button onclick="filterTerminalRegion('강원', this)" class="term-reg-btn px-4 py-2 rounded-xl text-xs font-bold bg-white border border-slate-200 text-slate-600 hover:border-primary transition-all">강원</button>
+        <button onclick="filterTerminalRegion('충청', this)" class="term-reg-btn px-4 py-2 rounded-xl text-xs font-bold bg-white border border-slate-200 text-slate-600 hover:border-primary transition-all">충청</button>
+        <button onclick="filterTerminalRegion('경상', this)" class="term-reg-btn px-4 py-2 rounded-xl text-xs font-bold bg-white border border-slate-200 text-slate-600 hover:border-primary transition-all">경상</button>
+      </div>
+      <div class="relative w-full md:w-72">
+        <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+        <input type="text" id="terminalSearchInput" onkeyup="renderTerminals()" placeholder="터미널명 검색..." class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-primary outline-none bg-white">
+      </div>
+    </div>
+
+    <div id="terminalGrid" class="grid grid-cols-1 md:grid-cols-3 gap-6"></div>
+  </div>
+
+  <!-- ================= VIEW 5: 고객지원 (신규 추가) ================= -->
+  <div id="view-support" class="hidden fade-in py-10 max-w-5xl mx-auto px-6">
+    <div class="mb-8">
+      <h1 class="text-2xl md:text-3xl font-extrabold text-slate-900">고객지원 센터</h1>
+      <p class="text-sm text-slate-500 mt-1">공지사항 및 자주 묻는 질문(FAQ)을 통해 궁금한 점을 신속하게 해결하세요.</p>
+    </div>
+
+    <!-- 탭: 공지사항 / 이벤트 / FAQ -->
+    <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm mb-8">
+      <div class="flex border-b border-slate-200 bg-slate-50 text-sm font-bold text-slate-600">
+        <button onclick="showSupportTab('faq', this)" class="support-tab-btn flex-1 py-4 text-primary bg-white border-b-2 border-primary">자주 묻는 질문 (FAQ)</button>
+        <button onclick="showSupportTab('notice', this)" class="support-tab-btn flex-1 py-4 hover:text-primary">공지사항</button>
+        <button onclick="showSupportTab('event', this)" class="support-tab-btn flex-1 py-4 hover:text-primary">이벤트</button>
+      </div>
+
+      <!-- FAQ 섹션 -->
+      <div id="supp-faq" class="p-6 md:p-8 space-y-4">
+        <div class="border border-slate-200 rounded-xl p-4 hover:border-primary transition-colors cursor-pointer" onclick="toggleAccordion(this)">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-sm text-slate-900"><span class="text-primary mr-2">Q.</span>예매 후 취소 시 수수료는 어떻게 부과되나요?</span>
+            <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400"></i>
+          </div>
+          <p class="text-xs text-slate-500 mt-3 pt-3 border-t border-slate-100 hidden">출발 2일 전까지는 취소 수수료가 전혀 없으며(0%), 출발 전일~당일 1시간 전까지는 5%, 출발 1시간 이내~출발 직전까지는 10%의 수수료가 공제됩니다.</p>
+        </div>
+
+        <div class="border border-slate-200 rounded-xl p-4 hover:border-primary transition-colors cursor-pointer" onclick="toggleAccordion(this)">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-sm text-slate-900"><span class="text-primary mr-2">Q.</span>모바일 QR 승차권으로 종이 티켓 없이 바로 탑승 가능한가요?</span>
+            <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400"></i>
+          </div>
+          <p class="text-xs text-slate-500 mt-3 pt-3 border-t border-slate-100 hidden">네! 버스타고에서 발권된 전자 QR 승차권을 버스 단말기에 태그하시면 매표소 방문 없이 즉시 탑승하실 수 있습니다.</p>
+        </div>
+
+        <div class="border border-slate-200 rounded-xl p-4 hover:border-primary transition-colors cursor-pointer" onclick="toggleAccordion(this)">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-sm text-slate-900"><span class="text-primary mr-2">Q.</span>비회원으로 예매했는데 내역을 어디서 확인하나요?</span>
+            <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400"></i>
+          </div>
+          <p class="text-xs text-slate-500 mt-3 pt-3 border-t border-slate-100 hidden">상단 메뉴의 [조회/변경/취소] -> [비회원 예매 조회] 탭에서 예매 시 입력하셨던 휴대폰 번호와 비밀번호(또는 결제 카드번호 4자리)를 입력하시면 즉시 조회가 가능합니다.</p>
+        </div>
+      </div>
+
+      <!-- 공지사항 섹션 -->
+      <div id="supp-notice" class="p-6 md:p-8 space-y-3 hidden">
+        <div class="flex items-center justify-between py-3 border-b border-slate-100">
+          <span class="font-semibold text-sm text-slate-800">[안내] 여름 휴가철 강원권 시외버스 특별 임시 증차 운행 안내</span>
+          <span class="text-xs text-slate-400">2026.08.15</span>
+        </div>
+        <div class="flex items-center justify-between py-3 border-b border-slate-100">
+          <span class="font-semibold text-sm text-slate-800">[시스템] 버스타고 모바일 웹 결제 시스템 보안 고도화 작업 완료</span>
+          <span class="text-xs text-slate-400">2026.08.02</span>
+        </div>
+        <div class="flex items-center justify-between py-3">
+          <span class="font-semibold text-sm text-slate-800">[규정] 시외버스 수하물 취급 규정 개정 안내 (2026년 기준)</span>
+          <span class="text-xs text-slate-400">2026.07.20</span>
+        </div>
+      </div>
+
+      <!-- 이벤트 섹션 -->
+      <div id="supp-event" class="p-6 md:p-8 grid grid-cols-1 md:grid-cols-2 gap-4 hidden">
+        <div class="bg-gradient-to-br from-primary to-primary-dark rounded-xl p-5 text-white">
+          <span class="text-[10px] font-bold bg-white/20 px-2 py-0.5 rounded-full">진행중</span>
+          <h4 class="font-extrabold text-base mt-2">첫 전자승차권 10% 페이백</h4>
+          <p class="text-xs text-white/80 mt-1">버스타고 신규 가입 후 첫 모바일 승차권 발권 시</p>
+        </div>
+        <div class="bg-gradient-to-br from-accent to-orange-700 rounded-xl p-5 text-white">
+          <span class="text-[10px] font-bold bg-white/20 px-2 py-0.5 rounded-full">진행중</span>
+          <h4 class="font-extrabold text-base mt-2">강원 동해안 노선 주말 특가</h4>
+          <p class="text-xs text-white/80 mt-1">동서울 ↔ 속초/강릉 노선 왕복 예매 시 2,000원 즉시 할인</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= VIEW 6: 이용안내 (신규 추가) ================= -->
+  <div id="view-guide" class="hidden fade-in py-10 max-w-5xl mx-auto px-6">
+    <div class="mb-8">
+      <h1 class="text-2xl md:text-3xl font-extrabold text-slate-900">버스타고 이용안내</h1>
+      <p class="text-sm text-slate-500 mt-1">승차권 예매 방법, 취소/환불 수수료 규정 및 탑승 절차를 쉽게 안내해 드립니다.</p>
+    </div>
+
+    <!-- 4단계 예매 가이드 -->
+    <div class="bg-white rounded-2xl border border-slate-200 p-6 md:p-8 shadow-sm mb-8">
+      <h3 class="text-lg font-extrabold text-slate-900 mb-6 flex items-center gap-2">
+        <i data-lucide="check-circle" class="w-5 h-5 text-primary"></i> 간편 예매 4단계 프로세스
+      </h3>
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="bg-slate-50 rounded-xl p-4 border border-slate-100 text-center">
+          <div class="w-8 h-8 rounded-full bg-primary text-white font-bold flex items-center justify-center mx-auto mb-2 text-sm">1</div>
+          <h4 class="font-bold text-sm text-slate-800">노선 및 일자 선택</h4>
+          <p class="text-xs text-slate-400 mt-1">출발지, 도착지, 탑승일과 인원을 선택합니다.</p>
+        </div>
+        <div class="bg-slate-50 rounded-xl p-4 border border-slate-100 text-center">
+          <div class="w-8 h-8 rounded-full bg-primary text-white font-bold flex items-center justify-center mx-auto mb-2 text-sm">2</div>
+          <h4 class="font-bold text-sm text-slate-800">배차 시간표 확인</h4>
+          <p class="text-xs text-slate-400 mt-1">원하는 시간대와 버스 등급(우등/프리미엄)을 고릅니다.</p>
+        </div>
+        <div class="bg-slate-50 rounded-xl p-4 border border-slate-100 text-center">
+          <div class="w-8 h-8 rounded-full bg-primary text-white font-bold flex items-center justify-center mx-auto mb-2 text-sm">3</div>
+          <h4 class="font-bold text-sm text-slate-800">원하는 좌석 선택</h4>
+          <p class="text-xs text-slate-400 mt-1">실시간 버스 배치도에서 원하는 좌석을 지정합니다.</p>
+        </div>
+        <div class="bg-slate-50 rounded-xl p-4 border border-slate-100 text-center">
+          <div class="w-8 h-8 rounded-full bg-accent text-white font-bold flex items-center justify-center mx-auto mb-2 text-sm">4</div>
+          <h4 class="font-bold text-sm text-slate-800">결제 & QR 발권</h4>
+          <p class="text-xs text-slate-400 mt-1">간편결제 후 모바일 QR 승차권으로 바로 탑승하세요.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 취소 수수료 규정 테이블 -->
+    <div class="bg-white rounded-2xl border border-slate-200 p-6 md:p-8 shadow-sm">
+      <h3 class="text-lg font-extrabold text-slate-900 mb-4 flex items-center gap-2">
+        <i data-lucide="receipt" class="w-5 h-5 text-primary"></i> 승차권 취소 및 환불 수수료 규정
+      </h3>
+      <table class="w-full text-left text-xs border border-slate-200 rounded-lg overflow-hidden">
+        <thead class="bg-slate-100 text-slate-600 font-bold">
+          <tr><th class="p-3 border-b">취소 시점</th><th class="p-3 border-b">취소 수수료</th><th class="p-3 border-b">비고</th></tr>
+        </thead>
+        <tbody class="divide-y text-slate-700">
+          <tr><td class="p-3 font-semibold">예매 당일 또는 출발 2일 전</td><td class="p-3 font-bold text-emerald-600">수수료 없음 (0%)</td><td class="p-3 text-slate-400">전액 환불</td></tr>
+          <tr><td class="p-3 font-semibold">출발 1일 전 ~ 출발 1시간 전</td><td class="p-3 font-bold text-slate-800">승차권 요금의 5%</td><td class="p-3 text-slate-400">-</td></tr>
+          <tr><td class="p-3 font-semibold">출발 1시간 이내 ~ 출발 직전</td><td class="p-3 font-bold text-orange-600">승차권 요금의 10%</td><td class="p-3 text-slate-400">-</td></tr>
+          <tr><td class="p-3 font-semibold">출발 후 6시간 이내</td><td class="p-3 font-bold text-red-600">승차권 요금의 30%</td><td class="p-3 text-slate-400">터미널 매표소 현장 취소</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+
+<!-- ================= REALISTIC FOOTER (하단 푸터 영역) ================= -->
+<footer class="bg-white border-t border-slate-200 mt-20">
+  <div class="max-w-7xl mx-auto px-6 py-10">
+    <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8">
+      
+      <!-- 좌측: ezl 로고 및 약관/기업정보 -->
+      <div class="flex flex-col md:flex-row items-start gap-6 md:gap-8 flex-1">
+        <div class="flex items-center gap-1 shrink-0">
+          <span class="text-3xl font-black italic tracking-tighter text-[#F5B300]">ezl</span>
+        </div>
+
+        <div class="space-y-2 text-xs text-slate-500">
+          <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-medium text-slate-700">
+            <a href="javascript:void(0)" onclick="switchView('guide')" class="hover:text-primary transition-colors">홈페이지 이용약관</a>
+            <span class="text-slate-300">|</span>
+            <a href="javascript:void(0)" onclick="switchView('guide')" class="font-bold text-primary hover:underline">개인정보처리방침</a>
+            <span class="text-slate-300">|</span>
+            <a href="javascript:void(0)" onclick="switchView('guide')" class="hover:text-primary transition-colors">이메일무단수집거부</a>
+            <span class="text-slate-300">|</span>
+            <a href="javascript:void(0)" onclick="switchView('guide')" class="hover:text-primary transition-colors">사업자정보</a>
+          </div>
+
+          <div class="space-y-1 text-[11px] text-slate-500 leading-relaxed">
+            <p>
+              <span>(주)이동의즐거움</span>
+              <span class="ml-2">사업자등록번호: 129-86-38970</span>
+              <span class="ml-2">통신판매업: 2014-서울금천-1119</span>
+            </p>
+            <p>
+              <span>COPYRIGHT(c) 2014 전국버스운송조합연합회 ALL RIGHTS RESERVED.</span>
+            </p>
+            <p class="flex flex-wrap gap-x-2">
+              <span>서울특별시 중구 청계천로 24, 케이스퀘어시티 10층</span>
+              <span>콜센터 1644-2992</span>
+              <span>interoper@myezl.com</span>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 우측: 웹접근성/ISMS 인증마크 & 패밀리사이트 드롭다운 -->
+      <div class="flex flex-col sm:flex-row items-start sm:items-center gap-6 shrink-0 w-full lg:w-auto justify-between lg:justify-end">
+        <div class="flex items-center gap-3">
+          <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-emerald-300 bg-emerald-50/70 text-[10px] font-bold text-emerald-800 shadow-sm">
+            <i data-lucide="accessibility" class="w-4 h-4 text-emerald-600"></i>
+            <span>웹 접근성 WA 품질인증</span>
+          </div>
+          <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-blue-300 bg-blue-50/70 text-[10px] font-bold text-blue-800 shadow-sm">
+            <i data-lucide="shield-check" class="w-4 h-4 text-blue-600"></i>
+            <span>ISMS 인증</span>
+          </div>
+        </div>
+
+        <div class="relative w-48 sm:w-44">
+          <select onchange="if(this.value) window.open(this.value, '_blank')" class="w-full appearance-none bg-white border-2 border-slate-800 rounded-md px-3 py-2 text-xs font-bold text-slate-800 pr-8 focus:outline-none focus:border-primary cursor-pointer">
+            <option value="">Family Site</option>
+            <option value="https://myezl.com">(주)이동의즐거움</option>
+            <option value="https://www.kobus.co.kr">KOBUS (고속버스통합)</option>
+            <option value="https://www.bus.or.kr">전국버스운송조합연합회</option>
+            <option value="https://www.t-money.co.kr">티머니</option>
+          </select>
+          <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-800">
+            <i data-lucide="chevron-down" class="w-4 h-4"></i>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+</footer>
+
+<!-- ================= MODAL 1: 좌석 선택 모달 ================= -->
+<div id="seatModal" class="fixed inset-0 z-50 hidden items-center justify-center modal-backdrop p-4">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md fade-in overflow-hidden">
+    <div class="flex items-center justify-between px-6 py-5 border-b border-slate-100">
+      <div>
+        <h3 class="text-base font-bold text-slate-900">좌석 선택</h3>
+        <p id="modalRouteInfo" class="text-xs text-slate-400 mt-0.5">동서울 → 속초 · 07:00</p>
+      </div>
+      <button onclick="closeSeatModal()" class="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+    <div class="px-6 py-6">
+      <div class="flex items-center justify-center gap-4 mb-6 text-xs text-slate-500">
+        <div class="flex items-center gap-1.5"><span class="w-4 h-4 rounded bg-white border border-slate-300"></span>선택가능</div>
+        <div class="flex items-center gap-1.5"><span class="w-4 h-4 rounded bg-primary"></span>선택됨</div>
+        <div class="flex items-center gap-1.5"><span class="w-4 h-4 rounded bg-slate-200"></span>예매완료</div>
+      </div>
+      <div class="flex justify-end mb-3 pr-1">
+        <div class="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center border border-slate-200" title="운전석">
+          <i data-lucide="steering-wheel" class="w-4 h-4 text-slate-400"></i>
+        </div>
+      </div>
+      <div id="seatGrid" class="space-y-2.5 max-w-[260px] mx-auto"></div>
+    </div>
+    <div class="bg-slate-50 px-6 py-5 border-t border-slate-100">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <p class="text-xs text-slate-400">선택 좌석</p>
+          <p id="selectedSeatsText" class="text-sm font-bold text-slate-800 mt-0.5">선택된 좌석이 없습니다</p>
+        </div>
+        <div class="text-right">
+          <p class="text-xs text-slate-400">총 결제 금액</p>
+          <p id="totalPriceText" class="text-lg font-extrabold text-primary mt-0.5">0원</p>
+        </div>
+      </div>
+      <button onclick="confirmSeats()" class="w-full bg-accent hover:bg-accent-dark text-white font-bold py-3.5 rounded-xl transition-colors shadow-md shadow-accent/20">
+        선택 완료하고 결제하기
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= MODAL 2: 로그인/회원가입 모달 ================= -->
+<div id="loginModal" class="fixed inset-0 z-50 hidden items-center justify-center modal-backdrop p-4">
+  <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md fade-in overflow-hidden border border-slate-100 relative">
+    <button onclick="closeLoginModal()" class="absolute top-5 right-5 w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 z-10">
+      <i data-lucide="x" class="w-5 h-5"></i>
+    </button>
+    <div class="pt-8 px-8 pb-4 text-center">
+      <div class="w-20 h-20 bg-slate-100 rounded-full mx-auto mb-3 flex items-center justify-center overflow-hidden">
+        <img src="img/login-illust.png" alt="로그인 일러스트" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=160&auto=format&fit=crop&q=80';" class="w-full h-full object-cover">
+      </div>
+      <h2 id="loginModalTitle" class="text-xl font-extrabold text-slate-900">버스타고 시작하기</h2>
+      <p class="text-xs text-slate-400 mt-1">간편하게 로그인하고 예매 내역을 관리하세요</p>
+      <div class="flex bg-slate-100 p-1 rounded-xl mt-6">
+        <button id="modalTabLogin" onclick="setAuthTab('login')" class="flex-1 py-2 text-xs font-bold rounded-lg bg-white text-slate-900 shadow-sm transition-all">로그인</button>
+        <button id="modalTabSignup" onclick="setAuthTab('signup')" class="flex-1 py-2 text-xs font-bold rounded-lg text-slate-500 hover:text-slate-800 transition-all">회원가입</button>
+      </div>
+    </div>
+    <div class="px-8 pb-8 space-y-3">
+      <button onclick="handleSocialLogin('kakao')" class="w-full py-3 px-4 rounded-xl bg-[#FEE500] hover:bg-[#fada0a] text-[#191919] font-bold text-xs flex items-center justify-center gap-2 transition-colors">
+        카카오로 3초 만에 시작하기
+      </button>
+      <button onclick="handleSocialLogin('google')" class="w-full py-3 px-4 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs flex items-center justify-center gap-2 transition-colors">
+        Google 계정으로 계속하기
+      </button>
+      <input type="email" id="authEmail" placeholder="이메일 주소 입력" class="w-full px-4 py-3 rounded-xl border text-xs bg-slate-50 focus:bg-white outline-none focus:border-primary">
+      <button onclick="handleEmailAuth()" class="w-full py-3.5 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold text-xs transition-colors shadow-sm">
+        이메일로 계속하기
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= MODAL 3: QR 모바일 승차권 ================= -->
+<div id="qrModal" class="fixed inset-0 z-50 hidden items-center justify-center modal-backdrop p-4">
+  <div class="bg-white rounded-3xl shadow-2xl w-full max-w-sm fade-in overflow-hidden p-6 text-center relative border border-slate-100">
+    <button onclick="closeQrModal()" class="absolute top-4 right-4 w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400">
+      <i data-lucide="x" class="w-5 h-5"></i>
+    </button>
+    <div class="w-10 h-10 rounded-full bg-primary-light text-primary flex items-center justify-center mx-auto mb-2">
+      <i data-lucide="qr-code" class="w-5 h-5"></i>
+    </div>
+    <h3 class="text-base font-bold text-slate-900">모바일 승차권 (QR)</h3>
+    <p id="qrRouteInfo" class="text-xs text-slate-500 mt-1 font-semibold">동서울 → 속초</p>
+    <div class="my-6 p-4 bg-slate-50 border border-slate-200 rounded-2xl inline-block shadow-inner">
+      <div class="w-40 h-40 bg-white border-2 border-slate-900 flex flex-col items-center justify-center p-3">
+        <i data-lucide="qr-code" class="w-24 h-24 text-slate-900"></i>
+        <span class="text-[10px] font-mono text-slate-500 mt-1 font-bold">BT-20260825-99</span>
+      </div>
+    </div>
+    <div class="bg-slate-50 p-3 rounded-xl text-xs text-slate-600 space-y-1 text-left border border-slate-100 mb-4">
+      <div class="flex justify-between"><span>좌석:</span><span id="qrSeat" class="font-bold text-primary">4A, 4B</span></div>
+      <div class="flex justify-between"><span>탑승 승강장:</span><span class="font-bold text-slate-800">3번 홈</span></div>
+      <div class="flex justify-between"><span>발권 상태:</span><span class="font-bold text-emerald-600">정상 발권완료</span></div>
+    </div>
+    <button onclick="closeQrModal()" class="w-full py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs">닫기</button>
+  </div>
+</div>
+
+<!-- ================= TOAST NOTIFICATION ================= -->
+<div id="toastNotification" class="fixed bottom-6 right-6 z-50 hidden items-center gap-3 bg-slate-900 text-white px-5 py-3.5 rounded-2xl shadow-xl fade-in text-sm font-semibold border border-slate-800">
+  <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-400 shrink-0"></i>
+  <span id="toastMessage">완료되었습니다.</span>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    lucide.createIcons();
+    setTodayDate();
+    renderTimetable();
+    renderTerminals();
+    updateLookupView();
+  });
+
+  let currentUser = null;
+  let userTickets = [
+    {
+      id: 'BT-20260825-001',
+      route: '동서울 → 속초',
+      date: '2026-08-25',
+      time: '07:00',
+      company: '금강고속',
+      grade: '우등',
+      seats: ['4A', '4B'],
+      price: 43400,
+      status: '예매완료'
+    }
+  ];
+
+  function setTodayDate() {
+    const input = document.getElementById('bookingDateInput');
+    if (input) input.value = '2026-08-25';
+  }
+
+  // 6대 GNB 뷰 전환 로직
+  function switchView(viewName) {
+    const views = ['booking', 'lookup', 'timetable', 'terminal', 'support', 'guide'];
+    views.forEach(v => {
+      const el = document.getElementById(`view-${v}`);
+      const navEl = document.getElementById(`nav-${v}`);
+      if (v === viewName) {
+        if (el) el.classList.remove('hidden');
+        if (navEl) navEl.classList.add('nav-active');
+      } else {
+        if (el) el.classList.add('hidden');
+        if (navEl) navEl.classList.remove('nav-active');
+      }
+    });
+    if (viewName === 'lookup') updateLookupView();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    lucide.createIcons();
+  }
+
+  function showToast(msg) {
+    const toast = document.getElementById('toastNotification');
+    document.getElementById('toastMessage').textContent = msg;
+    toast.classList.remove('hidden');
+    toast.classList.add('flex');
+    lucide.createIcons();
+    setTimeout(() => {
+      toast.classList.add('hidden');
+      toast.classList.remove('flex');
+    }, 2800);
+  }
+
+  function setTripType(type) {
+    const oneway = document.getElementById('tabOneway');
+    const round = document.getElementById('tabRound');
+    if (type === 'oneway') {
+      oneway.className = 'px-5 py-2 rounded-md text-sm font-semibold bg-white text-primary shadow-sm transition-all';
+      round.className = 'px-5 py-2 rounded-md text-sm font-semibold text-slate-500 hover:text-slate-900 transition-all';
+    } else {
+      round.className = 'px-5 py-2 rounded-md text-sm font-semibold bg-white text-primary shadow-sm transition-all';
+      oneway.className = 'px-5 py-2 rounded-md text-sm font-semibold text-slate-500 hover:text-slate-900 transition-all';
+    }
+  }
+
+  function switchStations() {
+    const org = document.getElementById('originInput');
+    const dst = document.getElementById('destInput');
+    const tmp = org.value;
+    org.value = dst.value;
+    dst.value = tmp;
+  }
+
+  function quickSelectRoute(org, dst) {
+    document.getElementById('originInput').value = org;
+    document.getElementById('destInput').value = dst;
+    searchBuses();
+    switchView('booking');
+  }
+
+  function searchBuses() {
+    const org = document.getElementById('originInput').value || '동서울';
+    const dst = document.getElementById('destInput').value || '속초';
+    document.getElementById('searchResultTitle').textContent = `${org} → ${dst}`;
+    showToast(`${org} → ${dst} 배차 목록을 불러왔습니다.`);
+  }
+
+  // 고객지원 탭 전환
+  function showSupportTab(tabName, btn) {
+    const tabs = ['faq', 'notice', 'event'];
+    tabs.forEach(t => {
+      document.getElementById(`supp-${t}`).classList.add('hidden');
+    });
+    document.getElementById(`supp-${tabName}`).classList.remove('hidden');
+
+    document.querySelectorAll('.support-tab-btn').forEach(b => {
+      b.className = 'support-tab-btn flex-1 py-4 hover:text-primary text-slate-600';
+    });
+    btn.className = 'support-tab-btn flex-1 py-4 text-primary bg-white border-b-2 border-primary font-bold';
+    lucide.createIcons();
+  }
+
+  function toggleAccordion(el) {
+    const p = el.querySelector('p');
+    const icon = el.querySelector('svg');
+    if (p.classList.contains('hidden')) {
+      p.classList.remove('hidden');
+    } else {
+      p.classList.add('hidden');
+    }
+  }
+
+  // 좌석 선택 모달 로직
+  let currentPrice = 21700;
+  let currentRouteString = '';
+  let selectedSeats = [];
+  const bookedSeats = ['1A', '2B', '3C', '5A', '5B'];
+
+  function openSeatModal(routeStr, price) {
+    currentRouteString = routeStr;
+    currentPrice = price;
+    document.getElementById('modalRouteInfo').textContent = routeStr;
+    selectedSeats = [];
+    generateSeatLayout();
+    updateSummary();
+    const modal = document.getElementById('seatModal');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    lucide.createIcons();
+  }
+
+  function closeSeatModal() {
+    const modal = document.getElementById('seatModal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  }
+
+  function generateSeatLayout() {
+    const grid = document.getElementById('seatGrid');
+    grid.innerHTML = '';
+    for (let r = 1; r <= 7; r++) {
+      const rowDiv = document.createElement('div');
+      rowDiv.className = 'flex items-center gap-2.5 justify-center';
+      rowDiv.appendChild(createSeat(r + 'A'));
+
+      const gap = document.createElement('div');
+      gap.className = 'w-5';
+      rowDiv.appendChild(gap);
+
+      rowDiv.appendChild(createSeat(r + 'B'));
+      rowDiv.appendChild(createSeat(r + 'C'));
+      grid.appendChild(rowDiv);
+    }
+  }
+
+  function createSeat(id) {
+    const btn = document.createElement('button');
+    btn.textContent = id;
+    btn.className = 'seat-btn w-11 h-11 rounded-lg text-xs font-bold border flex items-center justify-center';
+    if (bookedSeats.includes(id)) {
+      btn.disabled = true;
+      btn.className += ' bg-slate-200 text-slate-400 border-slate-200 cursor-not-allowed';
+    } else {
+      btn.className += ' bg-white text-slate-700 border-slate-300 hover:border-primary';
+      btn.onclick = () => toggleSeat(btn, id);
+    }
+    return btn;
+  }
+
+  function toggleSeat(btn, id) {
+    if (selectedSeats.includes(id)) {
+      selectedSeats = selectedSeats.filter(s => s !== id);
+      btn.className = 'seat-btn w-11 h-11 rounded-lg text-xs font-bold border flex items-center justify-center bg-white text-slate-700 border-slate-300 hover:border-primary';
+    } else {
+      selectedSeats.push(id);
+      btn.className = 'seat-btn w-11 h-11 rounded-lg text-xs font-bold border flex items-center justify-center bg-primary text-white border-primary';
+    }
+    selectedSeats.sort();
+    updateSummary();
+  }
+
+  function updateSummary() {
+    const textEl = document.getElementById('selectedSeatsText');
+    const priceEl = document.getElementById('totalPriceText');
+    if (selectedSeats.length === 0) {
+      textEl.textContent = '선택된 좌석이 없습니다';
+      priceEl.textContent = '0원';
+    } else {
+      textEl.textContent = `${selectedSeats.join(', ')} (${selectedSeats.length}석)`;
+      priceEl.textContent = (selectedSeats.length * currentPrice).toLocaleString('ko-KR') + '원';
+    }
+  }
+
+  function confirmSeats() {
+    if (selectedSeats.length === 0) {
+      alert('좌석을 최소 1개 이상 선택해 주세요.');
+      return;
+    }
+    const newTicket = {
+      id: `BT-20260825-${Math.floor(Math.random()*900+100)}`,
+      route: currentRouteString.split('·')[0].trim(),
+      date: '2026-08-25',
+      time: currentRouteString.split('·')[1]?.trim() || '07:00',
+      company: '금강고속',
+      grade: '우등',
+      seats: [...selectedSeats],
+      price: selectedSeats.length * currentPrice,
+      status: '예매완료'
+    };
+    userTickets.unshift(newTicket);
+    closeSeatModal();
+    showToast('예매가 완료되었습니다! 예매 내역으로 이동합니다.');
+    switchView('lookup');
+  }
+
+  function setLookupTab(tab) {
+    const btnMem = document.getElementById('tabLookupMember');
+    const btnNon = document.getElementById('tabLookupNonMember');
+    const vMem = document.getElementById('lookupMemberView');
+    const vNon = document.getElementById('lookupNonMemberView');
+    if (tab === 'member') {
+      btnMem.className = 'flex-1 py-4 font-bold text-sm text-primary bg-white border-b-2 border-primary transition-all';
+      btnNon.className = 'flex-1 py-4 font-bold text-sm text-slate-500 hover:text-slate-700 transition-all';
+      vMem.classList.remove('hidden');
+      vNon.classList.add('hidden');
+    } else {
+      btnNon.className = 'flex-1 py-4 font-bold text-sm text-primary bg-white border-b-2 border-primary transition-all';
+      btnMem.className = 'flex-1 py-4 font-bold text-sm text-slate-500 hover:text-slate-700 transition-all';
+      vNon.classList.remove('hidden');
+      vMem.classList.add('hidden');
+    }
+  }
+
+  function updateLookupView() {
+    const container = document.getElementById('memberLogState');
+    if (!container) return;
+    if (userTickets.length === 0) {
+      container.innerHTML = `
+        <div class="border border-dashed border-slate-200 rounded-2xl p-10 flex flex-col items-center justify-center text-center bg-slate-50/50">
+          <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-3">
+            <img src="img/내역없음.jpg" onerror="this.onerror=null; this.parentElement.innerHTML='<i data-lucide=\'ticket-slash\' class=\'w-8 h-8 text-slate-400\'></i>';" class="w-10 h-10 object-contain">
+          </div>
+          <p class="text-sm font-bold text-slate-700">조회된 예매 내역이 없습니다.</p>
+          <p class="text-xs text-slate-400 mt-1">버스타고에서 새로운 승차권을 예매해 보세요!</p>
+          <button onclick="switchView('booking')" class="mt-4 px-5 py-2 rounded-xl bg-primary text-white font-bold text-xs hover:bg-primary-dark transition-colors">
+            승차권 예매하러 가기
+          </button>
+        </div>
+      `;
+    } else {
+      let html = '<div class="space-y-4">';
+      userTickets.forEach(t => {
+        html += `
+          <div class="border border-slate-200 rounded-2xl p-5 md:p-6 bg-white hover:shadow-md transition-all flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <span class="px-2.5 py-0.5 rounded text-xs font-bold ${t.status==='예매완료'?'bg-emerald-100 text-emerald-700':'bg-slate-100 text-slate-500'}">${t.status}</span>
+              <span class="text-xs font-mono text-slate-400 ml-2">${t.id}</span>
+              <h4 class="text-lg font-extrabold text-slate-900 mt-2">${t.route}</h4>
+              <p class="text-xs text-slate-500 mt-1">일시: <strong class="text-slate-700">${t.date} ${t.time}</strong> | 버스: ${t.company} (${t.grade})</p>
+              <p class="text-xs text-slate-500 mt-0.5">좌석: <strong class="text-primary">${t.seats.join(', ')}</strong> (${t.seats.length}석)</p>
+            </div>
+            <div class="flex items-center gap-3">
+              <button onclick="openQrModal('${t.route}', '${t.seats.join(', ')}')" class="px-4 py-2.5 bg-primary-light text-primary hover:bg-primary hover:text-white font-bold rounded-xl text-xs transition-colors flex items-center gap-1.5">
+                <i data-lucide="qr-code" class="w-3.5 h-3.5"></i> QR 승차권
+              </button>
+              ${t.status==='예매완료'?`<button onclick="cancelTicket('${t.id}')" class="px-4 py-2.5 border border-red-200 text-red-600 hover:bg-red-50 font-bold rounded-xl text-xs transition-colors">취소하기</button>`:''}
+            </div>
+          </div>
+        `;
+      });
+      html += '</div>';
+      container.innerHTML = html;
+    }
+    lucide.createIcons();
+  }
+
+  function handleNonMemberLookup(e) {
+    e.preventDefault();
+    document.getElementById('nonMemberResult').innerHTML = `
+      <div class="border border-emerald-200 bg-emerald-50/70 rounded-2xl p-5 text-sm">
+        <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-100 text-emerald-700">비회원 예매 확인</span>
+        <h4 class="font-extrabold text-slate-900 text-base mt-2">동서울 → 속초</h4>
+        <p class="text-xs text-slate-600 mt-1">일시: 2026-08-25 07:00 (우등 / 4A, 4B)</p>
+        <button onclick="openQrModal('동서울 → 속초', '4A, 4B')" class="mt-3 px-4 py-2 bg-primary text-white font-bold rounded-lg text-xs">QR 승차권 보기</button>
+      </div>
+    `;
+    showToast('비회원 예매 정보가 조회되었습니다.');
+  }
+
+  function cancelTicket(id) {
+    if (confirm('예매 승차권을 취소하시겠습니까? (출발 전 취소 수수료 0원)')) {
+      const item = userTickets.find(t => t.id === id);
+      if (item) item.status = '취소완료';
+      updateLookupView();
+      showToast('예매가 정상적으로 취소되었습니다.');
+    }
+  }
+
+  const TIMETABLE = [
+    { org: '동서울', dst: '속초', time: '06:30', comp: '금강고속', gr: '우등', dur: '2시간 10분', pr: '21,700원' },
+    { org: '동서울', dst: '속초', time: '07:00', comp: '금강고속', gr: '우등', dur: '2시간 10분', pr: '21,700원' },
+    { org: '동서울', dst: '속초', time: '08:30', comp: '동양고속', gr: '프리미엄', dur: '2시간 05분', pr: '28,900원' },
+    { org: '동서울', dst: '강릉', time: '07:20', comp: '강원고속', gr: '우등', dur: '1시간 40분', pr: '18,500원' },
+    { org: '서울경부', dst: '부산', time: '06:00', comp: '중앙고속', gr: '프리미엄', dur: '4시간 15분', pr: '39,800원' },
+    { org: '서울경부', dst: '부산', time: '08:00', comp: '금호고속', gr: '우등', dur: '4시간 20분', pr: '35,700원' }
+  ];
+
+  function renderTimetable() {
+    const tbody = document.getElementById('timetableTbody');
+    const org = document.getElementById('ttOrigin').value;
+    const dst = document.getElementById('ttDest').value;
+    const gr = document.getElementById('ttGrade').value;
+
+    const filtered = TIMETABLE.filter(item => {
+      if (org !== '전체' && item.org !== org) return false;
+      if (dst !== '전체' && item.dst !== dst) return false;
+      if (gr !== '전체' && item.gr !== gr) return false;
+      return true;
+    });
+
+    document.getElementById('ttCount').textContent = `검색 결과 ${filtered.length}건`;
+    if (filtered.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-xs text-slate-400">조건에 일치하는 시간표가 없습니다.</td></tr>`;
+      return;
+    }
+    let html = '';
+    filtered.forEach(it => {
+      let badge = it.gr === '프리미엄' ? 'bg-accent-light text-accent' : (it.gr === '우등' ? 'bg-primary-light text-primary' : 'bg-slate-100 text-slate-600');
+      html += `
+        <tr class="hover:bg-slate-50 transition-colors">
+          <td class="py-4 px-6 font-extrabold text-slate-900">${it.time}</td>
+          <td class="py-4 px-6 font-semibold text-slate-800">${it.org} → ${it.dst}</td>
+          <td class="py-4 px-6 text-slate-600 text-xs">${it.comp}</td>
+          <td class="py-4 px-6"><span class="px-2 py-0.5 rounded-full text-xs font-bold ${badge}">${it.gr}</span></td>
+          <td class="py-4 px-6 text-xs text-slate-500">${it.dur}</td>
+          <td class="py-4 px-6 font-bold text-slate-900">${it.pr}</td>
+          <td class="py-4 px-6 text-center">
+            <button onclick="quickSelectRoute('${it.org}', '${it.dst}')" class="px-3.5 py-1.5 bg-primary hover:bg-primary-dark text-white font-bold text-xs rounded-lg transition-colors">예매</button>
+          </td>
+        </tr>
+      `;
+    });
+    tbody.innerHTML = html;
+  }
+
+  const TERMINALS = [
+    { name: '동서울종합터미널', reg: '서울/경기', addr: '서울특별시 광진구 강변역로 50', phone: '1688-5979', img: 'img/term-dongseoul.jpg', fallback: 'https://images.unsplash.com/photo-1570125909232-eb263c188f7e?w=500&auto=format&fit=crop&q=80' },
+    { name: '속초시외버스터미널', reg: '강원', addr: '강원특별자치도 속초시 번영로 148', phone: '1688-6320', img: 'img/term-sokcho.jpg', fallback: 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=500&auto=format&fit=crop&q=80' },
+    { name: '대전복합터미널', reg: '충청', addr: '대전광역시 동구 동서대로 1689', phone: '1577-2259', img: 'img/term-daejeon.jpg', fallback: 'https://images.unsplash.com/photo-1517649763962-0c623266ddc0?w=500&auto=format&fit=crop&q=80' }
+  ];
+
+  let currentTerminalRegion = '전국';
+
+  function renderTerminals() {
+    const grid = document.getElementById('terminalGrid');
+    const kw = (document.getElementById('terminalSearchInput')?.value || '').trim().toLowerCase();
+    const filtered = TERMINALS.filter(t => {
+      const matchReg = currentTerminalRegion === '전국' || t.reg === currentTerminalRegion;
+      const matchKw = t.name.toLowerCase().includes(kw) || t.addr.toLowerCase().includes(kw);
+      return matchReg && matchKw;
+    });
+
+    if (filtered.length === 0) {
+      grid.innerHTML = '<div class="col-span-full text-center py-12 text-slate-400 text-sm">일치하는 터미널 정보가 없습니다.</div>';
+      return;
+    }
+
+    let html = '';
+    filtered.forEach(t => {
+      html += `
+        <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm flex flex-col hover:shadow-md transition-shadow">
+          <div class="h-32 bg-slate-100 overflow-hidden">
+            <img src="${t.img}" alt="${t.name}" onerror="this.onerror=null; this.src='${t.fallback}';" class="w-full h-full object-cover">
+          </div>
+          <div class="p-5 flex-1 flex flex-col justify-between space-y-3">
+            <div>
+              <span class="text-xs font-bold px-2 py-0.5 rounded-full bg-primary-light text-primary mb-1.5 inline-block">${t.reg}</span>
+              <h3 class="text-base font-extrabold text-slate-900">${t.name}</h3>
+              <p class="text-xs text-slate-500 mt-1 flex items-start gap-1">
+                <i data-lucide="map-pin" class="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5"></i>${t.addr}
+              </p>
+            </div>
+            <div class="border-t border-slate-100 pt-3 flex items-center justify-between">
+              <span class="text-xs font-bold text-slate-700"><i data-lucide="phone" class="w-3 h-3 inline mr-1 text-slate-400"></i>${t.phone}</span>
+              <button onclick="quickSelectRoute('${t.name.substring(0,2)}', '속초')" class="px-3 py-1.5 bg-primary-light hover:bg-primary hover:text-white text-primary font-bold rounded-lg text-xs transition-colors">
+                출발지로 설정
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+    grid.innerHTML = html;
+    lucide.createIcons();
+  }
+
+  function filterTerminalRegion(reg, btn) {
+    currentTerminalRegion = reg;
+    document.querySelectorAll('.term-reg-btn').forEach(b => {
+      b.className = 'term-reg-btn px-4 py-2 rounded-xl text-xs font-bold bg-white border border-slate-200 text-slate-600 hover:border-primary transition-all';
+    });
+    btn.className = 'term-reg-btn px-4 py-2 rounded-xl text-xs font-bold bg-primary text-white shadow-sm transition-all';
+    renderTerminals();
+  }
+
+  function openLoginModal(mode) {
+    const modal = document.getElementById('loginModal');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    setAuthTab(mode);
+    lucide.createIcons();
+  }
+  function closeLoginModal() {
+    const modal = document.getElementById('loginModal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  }
+  function setAuthTab(mode) {
+    const lTab = document.getElementById('modalTabLogin');
+    const sTab = document.getElementById('modalTabSignup');
+    const title = document.getElementById('loginModalTitle');
+    if (mode === 'login') {
+      lTab.className = 'flex-1 py-2 text-xs font-bold rounded-lg bg-white text-slate-900 shadow-sm transition-all';
+      sTab.className = 'flex-1 py-2 text-xs font-bold rounded-lg text-slate-500 hover:text-slate-800 transition-all';
+      title.textContent = '버스타고 시작하기';
+    } else {
+      sTab.className = 'flex-1 py-2 text-xs font-bold rounded-lg bg-white text-slate-900 shadow-sm transition-all';
+      lTab.className = 'flex-1 py-2 text-xs font-bold rounded-lg text-slate-500 hover:text-slate-800 transition-all';
+      title.textContent = '버스타고 무료 회원가입';
+    }
+  }
+  function handleSocialLogin(p) {
+    currentUser = { name: p === 'kakao' ? '김카카오' : '이구글', avatar: p === 'kakao' ? '카' : 'G' };
+    loginSuccess();
+  }
+  function handleEmailAuth() {
+    currentUser = { name: '홍길동', avatar: '홍' };
+    loginSuccess();
+  }
+  function loginSuccess() {
+    closeLoginModal();
+    document.getElementById('guestHeader').classList.add('hidden');
+    document.getElementById('userHeader').classList.remove('hidden');
+    document.getElementById('userHeader').classList.add('flex');
+    document.getElementById('userName').textContent = `${currentUser.name} 님`;
+    document.getElementById('userAvatar').textContent = currentUser.avatar;
+    showToast(`${currentUser.name}님 환영합니다! 🎉`);
+    updateLookupView();
+  }
+  function handleLogout() {
+    currentUser = null;
+    document.getElementById('userHeader').classList.add('hidden');
+    document.getElementById('userHeader').classList.remove('flex');
+    document.getElementById('guestHeader').classList.remove('hidden');
+    showToast('로그아웃되었습니다.');
+    updateLookupView();
+  }
+
+  function openQrModal(route, seats) {
+    document.getElementById('qrRouteInfo').textContent = route;
+    document.getElementById('qrSeat').textContent = seats;
+    const modal = document.getElementById('qrModal');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    lucide.createIcons();
+  }
+  function closeQrModal() {
+    const modal = document.getElementById('qrModal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  }
+
+  document.getElementById('seatModal').addEventListener('click', e => { if (e.target.id === 'seatModal') closeSeatModal(); });
+  document.getElementById('loginModal').addEventListener('click', e => { if (e.target.id === 'loginModal') closeLoginModal(); });
+  document.getElementById('qrModal').addEventListener('click', e => { if (e.target.id === 'qrModal') closeQrModal(); });
+</script>
+
+</body>
+</html>
